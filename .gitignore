@@ -1,5 +1,6 @@
 .DS_Store
 .env
+mysql.cnf
 /.vagrant
 /node_modules
 /vendor

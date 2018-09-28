@@ -1,0 +1,11 @@
+{
+    "extends": "standard",
+    "rules": {
+        "indent": ["error", 4],
+        "no-unused-vars": "warn",
+        "no-multi-spaces": "off",
+        "key-spacing": "off",
+        "standard/no-callback-literal": "off",
+        "space-before-function-paren": "off"
+    }
+}
