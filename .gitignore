@@ -2,6 +2,7 @@
 .env
 mysql.cnf
 /.vagrant
+/.vscode
 /node_modules
 /vendor
 /data
