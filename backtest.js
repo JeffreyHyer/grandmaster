@@ -156,21 +156,33 @@ db.query(queries.join(';'), (error, results) => {
             generateSummary(symbol)
         }
 
+        let _output = null
+
         if (params.verbose) {
             symbols[symbol].output.unshift(['Signal', 'Symbol', 'Date', 'Price', 'P/L $', 'P/L %'])
-        }
 
-        const _output = table(symbols[symbol].output, {
-            columns: {
-                0: { alignment: 'left' },
-                1: { alignment: 'left' },
-                2: { alignment: 'right' },
-                3: { alignment: 'right' },
-                4: { alignment: 'right' },
-                5: { alignment: 'right' }
-            },
-            border: getBorderCharacters('norc')
-        })
+            _output = table(symbols[symbol].output, {
+                columns: {
+                    0: { alignment: 'left' },
+                    1: { alignment: 'left' },
+                    2: { alignment: 'right' },
+                    3: { alignment: 'right' },
+                    4: { alignment: 'right' },
+                    5: { alignment: 'right' }
+                },
+                border: getBorderCharacters('norc')
+            })
+        } else {
+            _output = table(symbols[symbol].output, {
+                columns: {
+                    0: { alignment: 'left' },
+                    1: { alignment: 'right' },
+                    2: { alignment: 'right' },
+                    3: { alignment: 'right' }
+                },
+                border: getBorderCharacters('norc')
+            })
+        }
 
         // If the tofile flag was set, output the results to a file,
         // otherwise output to the console.
@@ -360,7 +372,7 @@ function generateSummary (symbol) {
 
     if (params.verbose) {
         output.push([' ', 'Total Profit (Loss)', ' ', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
-        output.push([' ', 'Trade Count', '', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
+        output.push([' ', 'Trade Count', ' ', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
         output.push([' ', 'Trade Win (Loss) %', ' ', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
         output.push([' ', 'Avg Win (Loss) $', ' ', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
         output.push([' ', 'Avg Win (Loss) %', ' ', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
@@ -368,14 +380,14 @@ function generateSummary (symbol) {
         output.push([' ', 'Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' ', ' '])
         output.push([' ', 'Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' ', ' '])
     } else {
-        output.push(['Total Profit (Loss)', ' ', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
-        output.push(['Trade Count', '', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
-        output.push(['Trade Win (Loss) %', ' ', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
-        output.push(['Avg Win (Loss) $', ' ', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
-        output.push(['Avg Win (Loss) %', ' ', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
-        output.push(['Buy & Hold P(L)', ' ', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
-        output.push(['Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' ', ' '])
-        output.push(['Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' ', ' '])
+        output.push(['Total Profit (Loss)', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
+        output.push(['Trade Count', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
+        output.push(['Trade Win (Loss) %', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
+        output.push(['Avg Win (Loss) $', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
+        output.push(['Avg Win (Loss) %', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
+        output.push(['Buy & Hold P(L)', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
+        output.push(['Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' '])
+        output.push(['Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' '])
     }
 }
 

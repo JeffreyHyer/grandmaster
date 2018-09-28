@@ -3,6 +3,9 @@ const BollingerBands    = require('../../lib/BollingerBands')
 const utils             = require('../../lib/utils')
 const config            = require('./config')
 
+/**
+ * A strategy must always extend the `BaseStrategy` class.
+ */
 class Strategy extends BaseStrategy {
     /**
      * @param String[] symbols
@@ -17,7 +20,12 @@ class Strategy extends BaseStrategy {
     }
 
     /**
-     * Called when a new bar is available
+     * Called when a new bar is available, if your strategy doesn't
+     * require the use of technical indicators and only uses basic
+     * data (open, high, low, close, volume) then you can omit this
+     * function because it overrides the `addBar` function in
+     * BaseStrategy which is unnecessary if you don't perform
+     * additional actions inside this function.
      *
      * @param String symbol     The symbol that `bar` represents
      *
@@ -29,11 +37,11 @@ class Strategy extends BaseStrategy {
      *                          indicator functions.
      */
     addBar(symbol, bar, callback) {
-        // Add the close price to our Bollinger Band indicator
+        // Add the latest close price to our Bollinger Band indicator
         this.symbols[symbol].indicators['BollingerBands'].nextValue(bar.close)
 
-        // Execute the parents (BaseStrategy) `addBar` function after
-        // we've performed our strategy-specific operations.
+        // Execute the parent's `addBar` function AFTER we've
+        // performed our strategy-specific operations.
         super.addBar(symbol, bar, callback)
     }
 
