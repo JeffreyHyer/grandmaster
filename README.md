@@ -134,15 +134,15 @@ $ node backtest.js -s [YOUR STRATEGY FOLDER]
 
 The backtester also accepts several flags to modify it's behavior:
 
-Flag | Parameter | Description
------------|-----------|-----------
--s<br>--strategy | [FOLDER NAME] | The strategy to backtest.<br>**Required**
--v<br>--verbose | | Toggle verbosity. When included all the buy/sell signals will be output as well as the performance summary for the backtest.
--b<br>--begin | [DATE]<br>e.g. 2018-09-28 | Set the beginning date for the backtest.
--e<br>--end | [DATE]<br>e.g. 2018-09-28 | Set the ending date for the backtest.
--c<br>--capital | [NUMBER]<br>e.g. 5000 | Set the amount of capital to be used for the backtest.<br>Default is 1000.
--o<br>--tofile | | When included the output will be sent to a file instead of the console. Helpful for backtests that generate a lot of signals.
--d<br>--debug | | When included all data (bars and indicators setup on the strategy) will be output to a CSV file for easier debugging.
+Short Flag | Long Flag | Parameter | Description
+-----------|-----------|-----------|-----------
+-s | --strategy | [FOLDER NAME] | The strategy to backtest.<br>**Required**
+-v | --verbose | | Toggle verbosity. When included all the buy/sell signals will be output as well as the performance summary for the backtest.
+-b | --begin | [DATE]<br>e.g. 2018-09-28 | Set the beginning date for the backtest.
+-e | --end | [DATE]<br>e.g. 2018-09-28 | Set the ending date for the backtest.
+-c | --capital | [NUMBER]<br>e.g. 5000 | Set the amount of capital to be used for the backtest.<br>Default is 1000.
+-o | --tofile | | When included the output will be sent to a file instead of the console. Helpful for backtests that generate a lot of signals.
+-d | --debug | | When included all data (bars and indicators setup on the strategy) will be output to a CSV file for easier debugging.
 
 
 ## Available Indicators
