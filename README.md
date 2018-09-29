@@ -80,12 +80,12 @@ The easiest way to create your own strategy is to copy the example strategy fold
 $ cp -R ./strategies/example-strategy ./strategies/my-strategy
 ```
 
-From there you can modify `strategy.js` and `config.js` as needed to fit your needs.
+From there you can modify `strategy.js` and `config.json` as needed to fit your needs.
 
 ### Custom Strategies
 A strategy in grandmaster is defined with a folder in the `./strategies` folder with whatever unique name you want. You will use this folder name to reference your strategy in the backtester and the execution engine later on so remember it.
 
-Inside this folder you must have (at minimum) a `strategy.js` file and a `config.js` file.
+Inside this folder you must have (at minimum) a `strategy.js` file and a `config.json` file.
 
 A `strategy.js` file looks something like this:
 
@@ -106,13 +106,13 @@ class Strategy extends BaseStrategy {
 Within this file we can define our algorithm/strategy for trading a given equity. Within the `buy` function we execute the logic that determines when to buy the equity. Similarly within the `sell` function we determine when to sell that equity.
 
 ### Strategy Configuration
-A strategy requires a configuration file `config.js`. At minimum it must contain two keys: `historicBars` and `symbols`.
+A strategy requires a configuration file `config.json`. At minimum it must contain two keys: `historicBars` and `symbols`.
 
 `historicBars` determines how many bars to load from the history before we attempt to generate buy or sell signals for an equity. This is used to warm up our indicators when necessary. For example: If you're using a Bollinger Band with a 20-period look back window you'll want the the `historicBars` to be *at least* 20 beause you won't get accurate data from the Bollinger Band indicator until at least 20 bars have been seen.
 
 `symbols` defines which symbols to include in the backtest. You need to define at least one symbol but you can define as many as you want. One backtest will be run for each symbol defined. You can also use this object to define symbol-specific configuration values that can be accessed within your strategy when determining when to buy or sell.
 
-A bare-\ bones `config.js` file looks like this:
+A bare-bones `config.json` file looks like this:
 ```json
 {
     "historicBars": 60,
