@@ -31,7 +31,9 @@ const cliParams = [
     { name: 'begin',    alias: 'b', type: String,   defaultValue: '' },
     { name: 'end',      alias: 'e', type: String,   defaultValue: '' },
     { name: 'tofile',   alias: 'o', type: Boolean,  defaultValue: false },
-    { name: 'debug',    alias: 'd', type: Boolean,  defaultValue: false }
+    { name: 'debug',    alias: 'd', type: Boolean,  defaultValue: false },
+    { name: 'config',   alias: 'g', type: String,   defaultValue: undefined },
+    { name: 'format',   alias: 'f', type: String,   defaultValue: 'table' }
 ]
 const params = require('command-line-args')(cliParams)
 
@@ -44,14 +46,20 @@ if (undefined === params.strategy) {
 require('dotenv').config()
 
 // Load strategy-specific config from the strategy folder
-const config = require(`./strategies/${params.strategy}/config`)
+var config = {}
+
+if (params.config === undefined) {
+    config = require(`./strategies/${params.strategy}/config`)
+} else {
+    config = JSON.parse(params.config)
+}
 
 // Load the strategy definition from the strategy folder
 const Strategy = require(`./strategies/${params.strategy}/strategy`)
 
 // Initialize a new instance of the Strategy, passing in the
 // configured symbols
-const strategy = new Strategy(Object.keys(config.symbols))
+const strategy = new Strategy(Object.keys(config.symbols), config)
 
 const fs = require('fs')
 
@@ -158,30 +166,36 @@ db.query(queries.join(';'), (error, results) => {
 
         let _output = null
 
-        if (params.verbose) {
-            symbols[symbol].output.unshift(['Signal', 'Symbol', 'Date', 'Price', 'P/L $', 'P/L %'])
+        if (params.format === 'table') {
+            if (params.verbose) {
+                symbols[symbol].output.unshift(['Signal', 'Symbol', 'Date', 'Price', 'P/L $', 'P/L %'])
 
-            _output = table(symbols[symbol].output, {
-                columns: {
-                    0: { alignment: 'left' },
-                    1: { alignment: 'left' },
-                    2: { alignment: 'right' },
-                    3: { alignment: 'right' },
-                    4: { alignment: 'right' },
-                    5: { alignment: 'right' }
-                },
-                border: getBorderCharacters('norc')
-            })
-        } else {
-            _output = table(symbols[symbol].output, {
-                columns: {
-                    0: { alignment: 'left' },
-                    1: { alignment: 'right' },
-                    2: { alignment: 'right' },
-                    3: { alignment: 'right' }
-                },
-                border: getBorderCharacters('norc')
-            })
+                _output = table(symbols[symbol].output, {
+                    columns: {
+                        0: { alignment: 'left' },
+                        1: { alignment: 'left' },
+                        2: { alignment: 'right' },
+                        3: { alignment: 'right' },
+                        4: { alignment: 'right' },
+                        5: { alignment: 'right' }
+                    },
+                    border: getBorderCharacters('norc')
+                })
+            } else {
+                _output = table(symbols[symbol].output, {
+                    columns: {
+                        0: { alignment: 'left' },
+                        1: { alignment: 'right' },
+                        2: { alignment: 'right' },
+                        3: { alignment: 'right' }
+                    },
+                    border: getBorderCharacters('norc')
+                })
+            }
+        }
+
+        if (params.format === 'json') {
+            _output = JSON.stringify(symbols[symbol].output)
         }
 
         // If the tofile flag was set, output the results to a file,
@@ -208,8 +222,10 @@ function logSignal (signal) {
         let d = new Date(signal.bar.start)
         let s = signal.symbol
 
-        if (params.verbose) {
-            symbols[s].output.push(['[BUY]', s, d.toISOString(), `$${signal.bar.close.toFixed(2)}`, ' ', ' '])
+        if (params.format === 'table') {
+            if (params.verbose) {
+                symbols[s].output.push(['[BUY]', s, d.toISOString(), `$${signal.bar.close.toFixed(2)}`, ' ', ' '])
+            }
         }
 
         // Calculate the number of shares purchased based on the
@@ -249,8 +265,10 @@ function logSignal (signal) {
         trade.profit.pct = (((trade.sell.revenue - trade.buy.cost) / trade.buy.cost) * 100)
         trade.stats.timeHeld = ((trade.sell.timestamp - trade.buy.timestamp) / 1000 / 60)
 
-        if (params.verbose) {
-            symbols[s].output.push(['[SELL]', ' ', d.toISOString(), `$${trade.sell.price.toFixed(2)}`, `$${trade.profit.amt.toFixed(2)}`, `${trade.profit.pct.toFixed(2)}%`])
+        if (params.format === 'table') {
+            if (params.verbose) {
+                symbols[s].output.push(['[SELL]', ' ', d.toISOString(), `$${trade.sell.price.toFixed(2)}`, `$${trade.profit.amt.toFixed(2)}`, `${trade.profit.pct.toFixed(2)}%`])
+            }
         }
 
         symbols[s].trades.push(trade)
@@ -366,28 +384,41 @@ function generateSummary (symbol) {
     let buyHoldAmt = ((strategy.symbols[symbol].close.splice(-1)[0] * buyHoldQty) - (strategy.symbols[symbol].close[0] * buyHoldQty))
     let buyHoldPct = ((strategy.symbols[symbol].close.splice(-1)[0] - strategy.symbols[symbol].close[0]) / strategy.symbols[symbol].close[0])
 
-    if (params.verbose) {
-        output.push([' ', ' ', ' ', ' ', ' ', ' '])
-    }
+    if (params.format === 'table') {
+        if (params.verbose) {
+            output.push([' ', ' ', ' ', ' ', ' ', ' '])
+        }
 
-    if (params.verbose) {
-        output.push([' ', 'Total Profit (Loss)', ' ', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
-        output.push([' ', 'Trade Count', ' ', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
-        output.push([' ', 'Trade Win (Loss) %', ' ', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
-        output.push([' ', 'Avg Win (Loss) $', ' ', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
-        output.push([' ', 'Avg Win (Loss) %', ' ', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
-        output.push([' ', 'Buy & Hold P(L)', ' ', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
-        output.push([' ', 'Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' ', ' '])
-        output.push([' ', 'Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' ', ' '])
-    } else {
-        output.push(['Total Profit (Loss)', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
-        output.push(['Trade Count', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
-        output.push(['Trade Win (Loss) %', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
-        output.push(['Avg Win (Loss) $', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
-        output.push(['Avg Win (Loss) %', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
-        output.push(['Buy & Hold P(L)', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
-        output.push(['Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' '])
-        output.push(['Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' '])
+        if (params.verbose) {
+            output.push([' ', 'Total Profit (Loss)', ' ', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
+            output.push([' ', 'Trade Count', ' ', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
+            output.push([' ', 'Trade Win (Loss) %', ' ', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
+            output.push([' ', 'Avg Win (Loss) $', ' ', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
+            output.push([' ', 'Avg Win (Loss) %', ' ', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
+            output.push([' ', 'Buy & Hold P(L)', ' ', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
+            output.push([' ', 'Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' ', ' '])
+            output.push([' ', 'Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' ', ' '])
+        } else {
+            output.push(['Total Profit (Loss)', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
+            output.push(['Trade Count', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
+            output.push(['Trade Win (Loss) %', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
+            output.push(['Avg Win (Loss) $', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
+            output.push(['Avg Win (Loss) %', ' ', `${avgWinPct.toFixed(2)}%`, `${avgLossPct.toFixed(2)}%`])
+            output.push(['Buy & Hold P(L)', ' ', `$${buyHoldAmt.toFixed(2)}`, `${(buyHoldPct * 100).toFixed(2)}%`])
+            output.push(['Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' '])
+            output.push(['Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' '])
+        }
+    } else if (params.format === 'json') {
+        let _output = {}
+        _output.totalProfitLoss = { amt: Number(totalProfit.toFixed(2)), pct: Number(totalProfitPct.toFixed(2)) }
+        _output.tradeCount = { total: trades.length, won: numWin, lost: (trades.length - numWin) }
+        _output.tradeWinLossPct = { won: Number(pctWin.toFixed(2)), lost: Number(pctLoss.toFixed(2)) }
+        _output.avgWinLoss = { amt: { won: Number(avgWinAmt.toFixed(2)), lost: Number(avgLossAmt.toFixed(2)) }, pct: { won: Number(avgWinPct.toFixed(2)), lost: Number(avgLossPct.toFixed(2)) } }
+        _output.buyAndHold = { amt: Number(buyHoldAmt.toFixed(2)), pct: Number((buyHoldPct * 100).toFixed(2)) }
+        _output.avgTimeHeld = Number(avgTimeHeld.toFixed(0))
+        _output.avgTradesPerDay = Number(avgTradesPerDay.toFixed(0))
+
+        symbols[symbol].output = _output
     }
 }
 
