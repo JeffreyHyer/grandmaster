@@ -22,6 +22,13 @@
  *  - Output all data (bars and any strategy-specific indicators) to
  *    a file for debugging.
  *      -d|--debug
+ *
+ *  - Output format can be one of 'table' or 'json'.
+ *      -f|--format
+ *
+ *  - Pass a custom strategy config object (JSON) to the selected
+ *    strategy.
+ *      -g|--config
  */
 
 const cliParams = [
@@ -147,6 +154,8 @@ db.query(queries.join(';'), (error, results) => {
                 lastTrade.profit.pct = (((lastTrade.sell.revenue - lastTrade.buy.cost) / lastTrade.buy.cost) * 100)
                 lastTrade.stats.timeHeld = ((lastTrade.sell.timestamp - lastTrade.buy.timestamp) / 1000 / 60)
 
+                symbols[symbol].capital += lastTrade.sell.revenue
+
                 if (params.verbose) {
                     symbols[symbol].output.push(['[****]', ' ', d.toISOString(), `$${lastTrade.sell.price.toFixed(2)}`, `$${lastTrade.profit.amt.toFixed(2)}`, `${lastTrade.profit.pct.toFixed(2)}%`])
                 }
@@ -233,6 +242,8 @@ function logSignal (signal) {
         let qty = Number(Math.floor(symbols[s].capital / signal.bar.close))
         let cost = Number(signal.bar.close * qty).toFixed(2)
 
+        symbols[s].capital -= cost
+
         symbols[s].trades.push({
             buy: {
                 timestamp: d.getTime(),
@@ -272,6 +283,8 @@ function logSignal (signal) {
         }
 
         symbols[s].trades.push(trade)
+
+        symbols[s].capital += trade.sell.revenue
     }
 }
 
@@ -300,22 +313,24 @@ function generateSummary (symbol) {
     let output = symbols[symbol].output
 
     // Calculate the total profit/loss from all trades
-    let totalProfit = trades.reduce((profit, trade) => {
-        if (trade.sell.price === null) {
-            return profit
-        } else {
-            return (profit + trade.profit.amt)
-        }
-    }, 0)
+    // let totalProfit = trades.reduce((profit, trade) => {
+    //     if (trade.sell.price === null) {
+    //         return profit
+    //     } else {
+    //         return (profit + trade.profit.amt)
+    //     }
+    // }, 0)
+    let totalProfit = (symbols[symbol].capital - params.capital)
 
     // Calculate the total profit/loss percent from all trades
-    let totalProfitPct = trades.reduce((pct, trade) => {
-        if (trade.sell.price === null) {
-            return pct
-        } else {
-            return pct + trade.profit.pct
-        }
-    }, 0)
+    // let totalProfitPct = trades.reduce((pct, trade) => {
+    //     if (trade.sell.price === null) {
+    //         return pct
+    //     } else {
+    //         return pct + trade.profit.pct
+    //     }
+    // }, 0)
+    let totalProfitPct = ((totalProfit / params.capital) * 100)
 
     // Calculate the win/loss ratio from all trades
     let numWin = trades.reduce((count, trade) => {
@@ -390,7 +405,7 @@ function generateSummary (symbol) {
         }
 
         if (params.verbose) {
-            output.push([' ', 'Total Profit (Loss)', ' ', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
+            output.push([' ', 'Total Profit (Loss)', ' ', `$${symbols[symbol].capital.toFixed(2)}`, `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
             output.push([' ', 'Trade Count', ' ', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
             output.push([' ', 'Trade Win (Loss) %', ' ', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
             output.push([' ', 'Avg Win (Loss) $', ' ', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
@@ -399,7 +414,7 @@ function generateSummary (symbol) {
             output.push([' ', 'Avg Time Held', `${avgTimeHeld.toFixed(0)} minutes`, ' ', ' ', ' '])
             output.push([' ', 'Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' ', ' '])
         } else {
-            output.push(['Total Profit (Loss)', ' ', `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
+            output.push(['Total Profit (Loss)', `$${symbols[symbol].capital.toFixed(2)}`, `$${totalProfit.toFixed(2)}`, `${totalProfitPct.toFixed(2)}%`])
             output.push(['Trade Count', `${trades.length}`, `${numWin}`, `${(trades.length - numWin)}`])
             output.push(['Trade Win (Loss) %', ' ', `${pctWin.toFixed(2)}%`, `${pctLoss.toFixed(2)}%`])
             output.push(['Avg Win (Loss) $', ' ', `$${avgWinAmt.toFixed(2)}`, `$${avgLossAmt.toFixed(2)}`])
@@ -410,6 +425,7 @@ function generateSummary (symbol) {
         }
     } else if (params.format === 'json') {
         let _output = {}
+        _output.capital = { start: Number(params.capital), end: Number(symbols[symbol].capital.toFixed(2)) }
         _output.totalProfitLoss = { amt: Number(totalProfit.toFixed(2)), pct: Number(totalProfitPct.toFixed(2)) }
         _output.tradeCount = { total: trades.length, won: numWin, lost: (trades.length - numWin) }
         _output.tradeWinLossPct = { won: Number(pctWin.toFixed(2)), lost: Number(pctLoss.toFixed(2)) }

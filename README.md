@@ -143,6 +143,8 @@ Short Flag | Long Flag | Parameter | Description
 -c | --capital | [NUMBER]<br>e.g. 5000 | Set the amount of capital to be used for the backtest.<br>Default is 1000.
 -o | --tofile | | When included the output will be sent to a file instead of the console. Helpful for backtests that generate a lot of signals.
 -d | --debug | | When included all data (bars and indicators setup on the strategy) will be output to a CSV file for easier debugging.
+-f | --format | `table` \| `json` | Determines the output format, either an ASCII table or a JSON object (as a string).
+-g | --config | [stringified JSON] | Allows you to pass in a custom config object in JSON format to override the default `config.json`.
 
 
 ## Available Indicators

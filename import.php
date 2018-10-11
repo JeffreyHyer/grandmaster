@@ -13,19 +13,25 @@ use Dotenv\Dotenv;
 $dotenv = new Dotenv(__DIR__);
 $dotenv->load();
 
-if ($argc < 3) {
+if ($argc < 2) {
+    print "Usage: php import.php [SYMBOL] [DATE=YYYY-MM-DD]" . PHP_EOL;
     exit();
 }
 
 $symbol = strtolower($argv[1]);
-$date   = $argv[2];
+
+if ($argc > 2) {
+    $date = new Carbon($argv[2]);
+} else {
+    $date = Carbon::now();
+}
 
 $db = new mysqli($_ENV['MYSQL_HOST'], $_ENV['MYSQL_USER'], $_ENV['MYSQL_PASS'], $_ENV['MYSQL_DB']);
 
 $client = new GuzzleHttp\Client();
 $request = $client->request(
     'GET',
-    'https://sandbox.tradier.com/v1/markets/timesales?symbol=' . strtoupper($symbol) . '&interval=1min&start=' . $date . 'T00:00:00&end=' . $date . 'T23:59:59&session_filter=open',
+    'https://sandbox.tradier.com/v1/markets/timesales?symbol=' . strtoupper($symbol) . '&interval=1min&start=' . $date->format('Y-m-d') . 'T00:00:00&end=' . $date->format('Y-m-d') . 'T23:59:59&session_filter=open',
     [
         'headers' => [
             'Accept' => 'application/json',
@@ -34,7 +40,7 @@ $request = $client->request(
     ]
 );
 $data = $request->getBody();
-file_put_contents("./data/" . strtoupper($symbol) . "_{$date}.json", $data);
+file_put_contents("./data/" . strtoupper($symbol) . "_{$date->format('Y-m-d')}.json", $data);
 $file = json_decode($data, true);
 
 foreach ($file['series']['data'] as $bar) {
@@ -52,6 +58,6 @@ foreach ($file['series']['data'] as $bar) {
     }
 }
 
-fwrite(STDOUT, "[+] Processed: ./data/{$symbol}_{$date}.json" . PHP_EOL);
+fwrite(STDOUT, "[+] Processed: ./data/{$symbol}_{$date->format('Y-m-d')}.json" . PHP_EOL);
 
 $db->close();
