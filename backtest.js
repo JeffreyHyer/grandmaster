@@ -226,7 +226,7 @@ db.query(queries.join(';'), (error, results) => {
  *
  * @returns null
  */
-function logSignal (signal) {
+function logSignal(signal) {
     if (signal.buy === true) {
         let d = new Date(signal.bar.start)
         let s = signal.symbol
@@ -308,7 +308,7 @@ function logSignal (signal) {
  *
  * @returns null
  */
-function generateSummary (symbol) {
+function generateSummary(symbol) {
     let trades = symbols[symbol].trades
     let output = symbols[symbol].output
 
