@@ -29,6 +29,9 @@
  *  - Pass a custom strategy config object (JSON) to the selected
  *    strategy.
  *      -g|--config
+ *
+ *  - Define a specific data source for historical data
+ *      -a|--source STRING ["", "iex", "alpaca"]
  */
 
 const cliParams = [
@@ -40,7 +43,8 @@ const cliParams = [
     { name: 'tofile',   alias: 'o', type: Boolean,  defaultValue: false },
     { name: 'debug',    alias: 'd', type: Boolean,  defaultValue: false },
     { name: 'config',   alias: 'g', type: String,   defaultValue: undefined },
-    { name: 'format',   alias: 'f', type: String,   defaultValue: 'table' }
+    { name: 'format',   alias: 'f', type: String,   defaultValue: 'table' },
+    { name: 'source',   alias: 'a', type: String,   defaultValue: '' }
 ]
 const params = require('command-line-args')(cliParams)
 
@@ -87,17 +91,19 @@ let queries = []
 // strategy config file optionally limiting the data retrieved to the
 // beginning and/or ending dates specified by the user at runtime
 Object.keys(config.symbols).forEach(symbol => {
+    let sqlTable = ((params.source !== '') ? `${params.source}_${symbol.toLowerCase()}` : `${symbol.toLowerCase()}`)
+
     if (params.begin && params.begin !== '') {
         if (params.end && params.end !== '') {
-            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${symbol.toLowerCase()}\` WHERE \`start\` >= '${params.begin}' AND \`start\` <= '${params.end}' ORDER BY \`start\` ASC`)
+            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${sqlTable}\` WHERE \`start\` >= '${params.begin}' AND \`start\` <= '${params.end}' ORDER BY \`start\` ASC`)
         } else {
-            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${symbol.toLowerCase()}\` WHERE \`start\` >= '${params.begin}' ORDER BY \`start\` ASC`)
+            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${sqlTable}\` WHERE \`start\` >= '${params.begin}' ORDER BY \`start\` ASC`)
         }
     } else {
         if (params.end && params.end !== '') {
-            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${symbol.toLowerCase()}\` WHERE \`start\` <= '${params.end}' ORDER BY \`start\` ASC`)
+            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${sqlTable}\` WHERE \`start\` <= '${params.end}' ORDER BY \`start\` ASC`)
         } else {
-            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${symbol.toLowerCase()}\` ORDER BY \`start\` ASC`)
+            queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${sqlTable}\` ORDER BY \`start\` ASC`)
         }
     }
 
