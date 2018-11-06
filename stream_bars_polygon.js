@@ -61,6 +61,10 @@ nats.on('close', () => {
     console.log('[-] NATS connection closed')
 })
 
+nats.on('reconnect', () => {
+    console.log('[~] NATS reconnecting')
+})
+
 const natsID = nats.subscribe('T.TVIX', (msg) => {
     let data = JSON.parse(msg)
 
@@ -77,7 +81,18 @@ const natsID = nats.subscribe('T.TVIX', (msg) => {
 
     // console.log(`[TVIX]\t${data.s} @ ${data.p}`)
 
-    let minute = (new Date(data.t)).getMinutes()
+    let time = new Date(data.t)
+
+    // Ignore messages outside of normal market hours
+    if (time.getHours() < 9) {
+        return
+    } else if ((time.getHours() === 9) && (time.getMinutes() < 30)) {
+        return
+    } else if (time.getHours() > 15) {
+        return
+    }
+
+    let minute = time.getMinutes()
 
     if (lastMinute['TVIX'] !== minute) {
         if (lastMinute['TVIX'] !== null) {
