@@ -5,7 +5,7 @@ require('./vendor/autoload.php');
 use Carbon\Carbon;
 use Dotenv\Dotenv;
 
-$dotenv = new Dotenv(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
 $db = new mysqli($_ENV['MYSQL_HOST'], $_ENV['MYSQL_USER'], $_ENV['MYSQL_PASS'], $_ENV['MYSQL_DB']);

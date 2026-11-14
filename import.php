@@ -10,7 +10,7 @@ require('./vendor/autoload.php');
 use Carbon\Carbon;
 use Dotenv\Dotenv;
 
-$dotenv = new Dotenv(__DIR__);
+$dotenv = Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
 if ($argc < 2) {
