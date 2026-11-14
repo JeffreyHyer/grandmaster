@@ -14,13 +14,8 @@ const redis = createClient({
   database: Number(process.env.REDIS_DB || 0)
 })
 
-const mysql = require('mysql')
-const db = mysql.createConnection({
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASS,
-  database: process.env.MYSQL_DB
-})
+const { openDb, quoteId, ensureBarsTable } = require('./lib/db')
+const db = openDb()
 
 const firstMinute = {
   TVIX: true
@@ -142,7 +137,7 @@ process.on('SIGINT', async () => {
     console.log(`(!) Redis Error: ${error}`)
   }
 
-  db.end()
+  db.close()
 
   process.exit()
 })
@@ -201,29 +196,22 @@ const consolidateBar = (symbol) => {
     bar.start = date.setSeconds(0, 0)
     bar.end = date.setMinutes((date.getMinutes() + 1), 0, 0)
 
-    // Convert all timestamps to MySQL compatible datetime strings
+    // Convert all timestamps to datetime strings (the format stored in SQLite)
     bar.start = format(bar.start, 'yyyy-MM-dd HH:mm:ss')
     bar.end = format(bar.end, 'yyyy-MM-dd HH:mm:ss')
     bar.open_time = format(bar.open_time, 'yyyy-MM-dd HH:mm:ss')
     bar.close_time = format(bar.close_time, 'yyyy-MM-dd HH:mm:ss')
 
     // Save to database
-    db.query(
-            `INSERT INTO ${bar.symbol.toLowerCase()} VALUES(?, ?, ?, ?, ?, ?)`,
-            [
-              bar.start,
-              bar.open,
-              bar.high,
-              bar.low,
-              bar.close,
-              bar.volume
-            ],
-            (error) => {
-              if (error) {
-                console.log(`[!] MySQL ERROR: ${error}`)
-              }
-            }
-    )
+    try {
+      const table = bar.symbol.toLowerCase()
+
+      ensureBarsTable(db, table)
+      db.prepare(`INSERT INTO ${quoteId(table)} VALUES (?, ?, ?, ?, ?, ?)`)
+        .run(bar.start, bar.open, bar.high, bar.low, bar.close, bar.volume)
+    } catch (error) {
+      console.log(`[!] SQLite ERROR: ${error}`)
+    }
 
     redis.publish(bar.symbol, JSON.stringify(bar)).catch((error) => {
       console.log(`(!) Redis publish error: ${error}`)

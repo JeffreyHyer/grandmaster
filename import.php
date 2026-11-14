@@ -26,7 +26,10 @@ if ($argc > 2) {
     $date = Carbon::now();
 }
 
-$db = new mysqli($_ENV['MYSQL_HOST'], $_ENV['MYSQL_USER'], $_ENV['MYSQL_PASS'], $_ENV['MYSQL_DB']);
+require_once __DIR__ . '/db.php';
+$db = openDb();
+$table = "{$symbol}";
+ensureBarsTable($db, $table);
 
 $client = new GuzzleHttp\Client();
 $request = $client->request(
@@ -51,13 +54,9 @@ foreach ($file['series']['data'] as $bar) {
     $low        = (double)$bar['low'];
     $volume     = (double)$bar['volume'];
 
-    $db->query("INSERT IGNORE INTO {$symbol} VALUES('{$start}', '{$open}', '{$high}', '{$low}', '{$close}', '{$volume}')");
-
-    if ($db->error) {
-        fwrite(STDOUT, "[!] MYSQL ERROR: {$db->error}" . PHP_EOL);
-    }
+    insertBar($db, $table, [$start, $open, $high, $low, $close, $volume]);
 }
 
 fwrite(STDOUT, "[+] Processed: ./data/{$symbol}_{$date->format('Y-m-d')}.json" . PHP_EOL);
 
-$db->close();
+$db = null;

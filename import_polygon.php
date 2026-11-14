@@ -26,7 +26,10 @@ if ($argc > 2) {
     $date = Carbon::now();
 }
 
-$db = new mysqli($_ENV['MYSQL_HOST'], $_ENV['MYSQL_USER'], $_ENV['MYSQL_PASS'], $_ENV['MYSQL_DB']);
+require_once __DIR__ . '/db.php';
+$db = openDb();
+$table = "alpaca_{$symbol}";
+ensureBarsTable($db, $table);
 
 $client = new GuzzleHttp\Client();
 $request = $client->request(
@@ -59,13 +62,9 @@ foreach ($file['ticks'] as $bar) {
     $low        = (double)$bar['l'];
     $volume     = (double)$bar['v'];
 
-    $db->query("INSERT IGNORE INTO alpaca_{$symbol} VALUES('{$start}', '{$open}', '{$high}', '{$low}', '{$close}', '{$volume}')");
-
-    if ($db->error) {
-        fwrite(STDOUT, "[!] MYSQL ERROR: {$db->error}" . PHP_EOL);
-    }
+    insertBar($db, $table, [$start, $open, $high, $low, $close, $volume]);
 }
 
 fwrite(STDOUT, "[+] Processed: ./data/alpaca/{$symbol}_{$date->format('Y-m-d')}.json" . PHP_EOL);
 
-$db->close();
+$db = null;

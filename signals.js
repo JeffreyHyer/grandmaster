@@ -26,14 +26,8 @@ const redisBars = createClient({
 
 const redisSignals = redisBars.duplicate()
 
-const mysql = require('mysql')
-const db = mysql.createConnection({
-  host: process.env.MYSQL_HOST,
-  user: process.env.MYSQL_USER,
-  password: process.env.MYSQL_PASS,
-  database: process.env.MYSQL_DB,
-  multipleStatements: true
-})
+const { openDb, quoteId } = require('./lib/db')
+const db = openDb()
 
 const nodemailer = require('nodemailer')
 const smtp = nodemailer.createTransport({
@@ -50,48 +44,29 @@ console.log('============================================================')
 console.log((new Date()).toISOString())
 console.log('')
 
-const queries = []
 let historyLoaded = false
 
-Object.keys(config.symbols).forEach((symbol) => {
-  queries.push(`SELECT *, '${symbol}' AS symbol FROM \`${symbol.toLowerCase()}\` ORDER BY \`start\` DESC LIMIT ${config.historicBars}`)
-})
+try {
+  Object.keys(config.symbols).forEach((symbol) => {
+    // Newest bars first so LIMIT keeps the most recent ones, then reverse
+    const bars = db.prepare(`SELECT *, ? AS symbol FROM ${quoteId(symbol.toLowerCase())} ORDER BY start DESC LIMIT ?`)
+      .all(symbol, config.historicBars)
+      .reverse()
 
-db.query(queries.join(';'), (error, results) => {
-  if (error) {
-    console.log(`[!] MySQL ERROR: ${error.message}`)
-    shutdownRedis().finally(() => {
-      db.end(() => { process.exit(3) })
-    })
-    return
-  }
-
-  if (queries.length > 1) {
-    results.forEach((result) => {
-      const bars = []
-
-      result.forEach((bar) => {
-        bars.unshift(bar)
-      })
-
-      strategy.addHistory(bars[0].symbol, bars)
-    })
-  } else {
-    const bars = []
-
-    results.forEach((bar) => {
-      bars.unshift(bar)
-    })
-
-    strategy.addHistory(bars[0].symbol, bars)
-  }
-
-  db.end(() => {
-    console.log('[+] History Loaded')
-
-    historyLoaded = true
+    strategy.addHistory(symbol, bars)
   })
-})
+
+  db.close()
+  console.log('[+] History Loaded')
+
+  historyLoaded = true
+} catch (error) {
+  console.log(`[!] SQLite ERROR: ${error.message}`)
+  db.close()
+  shutdownRedis().finally(() => {
+    process.exit(3)
+  })
+}
 
 redisSignals.on('connect', () => {
   console.log('[+] [Redis:Signals] Connected')
