@@ -1,10 +1,11 @@
-const regression = require('regression')
+import regression from 'regression'
+import type { ValueSeries } from './types.ts'
 
 /**
  * Determine if a series has crossed under (from above)
  * another series or a given number
  */
-module.exports.crossunder = (seriesX, number) => {
+export const crossunder = (seriesX: ValueSeries | undefined, number: number | undefined): boolean => {
   if (seriesX && number) {
     return ((seriesX.previousValue() > number) && (seriesX.currentValue() <= number))
   } else {
@@ -12,7 +13,7 @@ module.exports.crossunder = (seriesX, number) => {
   }
 }
 
-module.exports.crossunderSeries = (seriesX, seriesY) => {
+export const crossunderSeries = (seriesX: ValueSeries, seriesY: ValueSeries): boolean => {
   return ((seriesX.previousValue() > seriesY.previousValue()) && (seriesX.currentValue() <= seriesY.currentValue()))
 }
 
@@ -20,7 +21,7 @@ module.exports.crossunderSeries = (seriesX, seriesY) => {
  * Determine if a series has crossed over (from below)
  * another series or a given number
  */
-module.exports.crossover = (seriesX, number) => {
+export const crossover = (seriesX: ValueSeries | undefined, number: number | undefined): boolean => {
   if (seriesX && number) {
     return ((seriesX.previousValue() < number) && (seriesX.currentValue() >= number))
   } else {
@@ -28,13 +29,13 @@ module.exports.crossover = (seriesX, number) => {
   }
 }
 
-module.exports.crossoverSeries = (seriesX, seriesY) => {
+export const crossoverSeries = (seriesX: ValueSeries, seriesY: ValueSeries): boolean => {
   return ((seriesX.previousValue() < seriesY.previousValue()) && (seriesX.currentValue() >= seriesY.currentValue()))
 }
 
-module.exports.calcTrend = (price, slope = 0.025) => {
+export const calcTrend = (price: number[], slope = 0.025): boolean => {
   const period = 10
-  const points = []
+  const points: Array<[number, number]> = []
 
   const i = (price.length - 1)
 
@@ -58,7 +59,7 @@ module.exports.calcTrend = (price, slope = 0.025) => {
  * @param Series series
  * @param Number time
  */
-module.exports.hasPeaked = (series, time = 1) => {
+export const hasPeaked = (series: ValueSeries, time = 1): boolean => {
   for (let i = 0; i <= time; i++) {
     const derivative = (series.previousValue(i) - series.previousValue(i + 1))
 
@@ -85,7 +86,7 @@ module.exports.hasPeaked = (series, time = 1) => {
  * @param Series series
  * @param Number time
  */
-module.exports.hasBottomed = (series, time = 1) => {
+export const hasBottomed = (series: ValueSeries, time = 1): boolean => {
   for (let i = 0; i <= time; i++) {
     const derivative = (series.previousValue(i) - series.previousValue(i + 1))
 
@@ -116,7 +117,7 @@ module.exports.hasBottomed = (series, time = 1) => {
  *
  * @return boolean
  */
-module.exports.persistentCrossunder = (x1, x2, time) => {
+export const persistentCrossunder = (x1: ValueSeries, x2: ValueSeries, time: number): boolean => {
   if (x1.previousValue(time) >= x2.previousValue(time)) {
     for (let i = 1; i < time; i++) {
       if (x1.previousValue(i) >= x2.previousValue(i)) {
@@ -130,7 +131,7 @@ module.exports.persistentCrossunder = (x1, x2, time) => {
   return false
 }
 
-module.exports.persistentCrossover = (x1, x2, time) => {
+export const persistentCrossover = (x1: ValueSeries, x2: ValueSeries, time: number): boolean => {
   if (x1.previousValue(time) <= x2.previousValue(time)) {
     for (let i = 1; i < time; i++) {
       if (x1.previousValue(i) <= x2.previousValue(i)) {
@@ -144,7 +145,7 @@ module.exports.persistentCrossover = (x1, x2, time) => {
   return false
 }
 
-module.exports.pctDiff = (seriesX, seriesY) => {
+export const pctDiff = (seriesX: ValueSeries, seriesY: ValueSeries): number => {
   return Math.abs(((seriesX.currentValue() - seriesY.currentValue()) / seriesY.currentValue()))
 }
 
@@ -154,7 +155,7 @@ module.exports.pctDiff = (seriesX, seriesY) => {
  * @param Series seriesY
  * @param Number within
  */
-module.exports.crossoverSeriesWithin = (seriesX, seriesY, within) => {
+export const crossoverSeriesWithin = (seriesX: ValueSeries, seriesY: ValueSeries, within: number): boolean => {
   for (let i = 0; i <= within; i++) {
     if ((seriesX.previousValue(i + 1) > seriesY.previousValue(i + 1)) && (seriesX.previousValue(i) <= seriesY.previousValue(i))) {
       return true
@@ -164,7 +165,7 @@ module.exports.crossoverSeriesWithin = (seriesX, seriesY, within) => {
   return false
 }
 
-module.exports.slope = (series) => {
+export const slope = (series: ValueSeries): number => {
   const derivative = (series.currentValue() - series.previousValue())
 
   if (derivative > 0) {

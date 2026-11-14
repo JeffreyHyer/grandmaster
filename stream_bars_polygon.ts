@@ -1,10 +1,11 @@
-require('dotenv').config()
+import dotenv from 'dotenv'
+import { format } from 'date-fns'
+import NATS from 'nats'
+import { createClient } from 'redis'
+import { openDb, quoteId, ensureBarsTable } from './lib/db.ts'
 
-const { format } = require('date-fns')
+dotenv.config()
 
-const NATS = require('nats')
-
-const { createClient } = require('redis')
 const redis = createClient({
   socket: {
     host: (process.env.REDIS_HOST || '127.0.0.1'),
@@ -14,18 +15,23 @@ const redis = createClient({
   database: Number(process.env.REDIS_DB || 0)
 })
 
-const { openDb, quoteId, ensureBarsTable } = require('./lib/db')
 const db = openDb()
 
-const firstMinute = {
+interface Tick {
+  size: number
+  price: number
+  time: number
+}
+
+const firstMinute: Record<string, boolean> = {
   TVIX: true
 }
 
-const lastMinute = {
+const lastMinute: Record<string, number | null> = {
   TVIX: null
 }
 
-const symbols = {
+const symbols: Record<string, Tick[][]> = {
   TVIX: [[]]
 }
 
@@ -62,7 +68,7 @@ nats.on('reconnect', () => {
   console.log('[~] NATS reconnecting')
 })
 
-const natsID = nats.subscribe('T.TVIX', (msg) => {
+const natsID = nats.subscribe('T.TVIX', (msg: string) => {
   const data = JSON.parse(msg)
 
   /**
@@ -142,21 +148,33 @@ process.on('SIGINT', async () => {
   process.exit()
 })
 
-const consolidateBar = (symbol) => {
+const consolidateBar = (symbol: string) => {
   if (symbols[symbol] && (symbols[symbol].length > 1)) {
-    const trades = symbols[symbol].pop()
+    const trades = symbols[symbol].pop()!
 
     if (firstMinute[symbol] === true) {
       firstMinute[symbol] = false
       return
     }
 
-    const bar = {
+    const bar: {
+      symbol: string
+      start: number | string
+      end: number | string
+      open_time: number | string
+      close_time: number | string
+      open: number
+      high: number
+      low: number
+      close: number
+      volume: number
+      trades: number
+    } = {
       symbol,
-      start: null,
-      end: null,
-      open_time: null,
-      close_time: null,
+      start: 0,
+      end: 0,
+      open_time: 0,
+      close_time: 0,
       open: 0,
       high: 0,
       low: Infinity,
@@ -169,12 +187,12 @@ const consolidateBar = (symbol) => {
       const time = (new Date(trade.time)).getTime()
       const price = Number(trade.price)
 
-      if ((!bar.open_time) || (time < bar.open_time)) {
+      if ((!bar.open_time) || (time < Number(bar.open_time))) {
         bar.open_time = time
         bar.open = price
       }
 
-      if ((!bar.close_time) || (time > bar.close_time)) {
+      if ((!bar.close_time) || (time > Number(bar.close_time))) {
         bar.close_time = time
         bar.close = price
       }
@@ -192,7 +210,7 @@ const consolidateBar = (symbol) => {
     })
 
     // Set start and end time
-    const date = new Date(bar.open_time)
+    const date = new Date(Number(bar.open_time))
     bar.start = date.setSeconds(0, 0)
     bar.end = date.setMinutes((date.getMinutes() + 1), 0, 0)
 

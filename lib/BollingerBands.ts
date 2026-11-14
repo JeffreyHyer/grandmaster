@@ -1,15 +1,32 @@
-const Indicator = require('./Indicator')
-const Series = require('./Series')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
+import Series from './Series.ts'
 
 /**
  * Bollinger Bands
  */
-class BollingerBands extends Indicator {
+export interface Bands {
+  upper: number
+  middle: number
+  lower: number
+}
+
+export interface BollingerBandsParams extends IndicatorParams {
+  stdDev?: number
+}
+
+class BollingerBands extends Indicator<Bands, number> {
+  period: number
+  stdDev: number
+  prices: Series
+  upperBand: Series
+  lowerBand: Series
+  middleBand: Series
+
   /**
      * @param Object params     Default: { period: 20, stdDev: 2 }
      */
-  constructor (params = {}) {
-    super(false)
+  constructor (params: BollingerBandsParams = {}) {
+    super()
 
     this.period = (params.period || 20)
     this.stdDev = (params.stdDev || 2)
@@ -37,7 +54,7 @@ class BollingerBands extends Indicator {
      *
      * @returns Object | null   See `currentValue()` below.
      */
-  nextValue (value, retval = true) {
+  nextValue (value: number, retval = true): Bands | undefined {
     this.prices.push(value)
 
     if (this.prices.length >= this.period) {
@@ -72,7 +89,7 @@ class BollingerBands extends Indicator {
      *                    middle: Number,
      *                    lower: Number }
      */
-  currentValue () {
+  currentValue (): Bands {
     return {
       upper: this.upperBand.currentValue(),
       middle: this.middleBand.currentValue(),
@@ -90,7 +107,7 @@ class BollingerBands extends Indicator {
      *                    middle: Number,
      *                    lower: Number }
      */
-  previousValue (offset = 1) {
+  previousValue (offset = 1): Bands {
     return {
       upper: this.upperBand.previousValue(offset),
       middle: this.middleBand.previousValue(offset),
@@ -105,8 +122,8 @@ class BollingerBands extends Indicator {
      *                     middle: Number,
      *                     lower: Number }]
      */
-  getValues () {
-    const values = []
+  getValues (): Bands[] {
+    const values: Bands[] = []
 
     this.upperBand.forEach((upper, index) => {
       values.push({
@@ -120,4 +137,4 @@ class BollingerBands extends Indicator {
   }
 }
 
-module.exports = BollingerBands
+export default BollingerBands

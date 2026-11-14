@@ -80,16 +80,16 @@ The easiest way to create your own strategy is to copy the example strategy fold
 $ cp -R ./strategies/example-strategy ./strategies/my-strategy
 ```
 
-From there you can modify `strategy.js` and `config.json` as needed to fit your needs.
+From there you can modify `strategy.ts` and `config.json` as needed to fit your needs.
 
 ### Custom Strategies
 A strategy in grandmaster is defined with a folder in the `./strategies` folder with whatever unique name you want. You will use this folder name to reference your strategy in the backtester and the execution engine later on so remember it.
 
-Inside this folder you must have (at minimum) a `strategy.js` file and a `config.json` file.
+Inside this folder you must have (at minimum) a `strategy.ts` file and a `config.json` file.
 
-A `strategy.js` file looks something like this:
+A `strategy.ts` file looks something like this:
 
-```javascript
+```typescript
 class Strategy extends BaseStrategy {
     buy() {
         // In the buy() function we define the logic
@@ -129,7 +129,7 @@ Once you've defined your strategy you can backtest it against historical data to
 
 To execute a backtest run:
 ```shell
-$ node backtest.js -s [YOUR STRATEGY FOLDER]
+$ node backtest.ts -s [YOUR STRATEGY FOLDER]
 ```
 
 The backtester also accepts several flags to modify it's behavior:

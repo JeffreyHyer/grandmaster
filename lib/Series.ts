@@ -1,17 +1,17 @@
-class Series extends Array {
+class Series<T = number> extends Array<T> {
   /**
      * Retreive the current (i.e. most recent) item in the series
      */
-  currentValue () {
+  currentValue (): T {
     return this.slice(-1)[0]
   }
 
   /**
      * Retrieve the value from [offset] periods ago
      *
-     * @param Number offset
+     * @param offset
      */
-  previousValue (offset = 1) {
+  previousValue (offset = 1): T {
     if (offset < 0) {
       offset = Math.abs(offset)
     }
@@ -19,7 +19,7 @@ class Series extends Array {
     return this[this.length - 1 - offset]
   }
 
-  nextValue (value) {
+  nextValue (value: T): T {
     this.push(value)
 
     return this.currentValue()
@@ -28,9 +28,9 @@ class Series extends Array {
   /**
      * Return all the values in the series
      */
-  getValues () {
+  getValues (): this {
     return this
   }
 }
 
-module.exports = Series
+export default Series

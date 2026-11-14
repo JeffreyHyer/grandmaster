@@ -1,5 +1,5 @@
 /* eslint-disable */
-const CMF = require('../CMF')
+import CMF from '../CMF.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:chaikin_money_flow_cmf

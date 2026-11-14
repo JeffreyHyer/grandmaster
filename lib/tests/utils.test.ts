@@ -1,6 +1,6 @@
 /* eslint-disable */
-const utils = require('../utils')
-const Series = require('../Series')
+import * as utils from '../utils.ts'
+import Series from '../Series.ts'
 
 const x = new Series(
     0.8517556023026154, 0.4490693735258726, 0.9872267604921230, 0.0401175466189283, 0.1256995966931448, 0.3847130530750613,
