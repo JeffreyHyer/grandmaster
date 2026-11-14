@@ -8,7 +8,7 @@ Grandmaster is a strategy backtesting and execution engine written in Node.js. T
 ### Requirements
 - Node.js >= 26
 - NPM
-- MySQL
+- SQLite (built into Node.js via `node:sqlite`)
 
 
 ### Optional, but suggested
@@ -23,7 +23,7 @@ Grandmaster is a strategy backtesting and execution engine written in Node.js. T
 ### Recommended Setup
 I recommend installing/running everything in an isolated environment like a virtual machine or a container. You can do that with something like Vagrant or Docker.
 
-It is possible to run this on your local machine as long as you have Node.js and MySQL installed but it isn't recommended. Dependency conflicts and runtime configration conflicts can cause lots of unnecessary problems that are easily avoided by running inside a virtual machine or a container.
+It is possible to run this on your local machine as long as you have Node.js installed but it isn't recommended. Dependency conflicts and runtime configration conflicts can cause lots of unnecessary problems that are easily avoided by running inside a virtual machine or a container.
 
 
 ### Usage
@@ -50,13 +50,13 @@ $ composer install
 
 Similarly, the PHP dependencies that will be installed can be found in the `composer.json` file.
 
-From here you'll need to copy or rename the `./.env.example` file to `./.env`. Edit this file, inserting your MySQL hostname and credentials along with the other config paramters available.
+From here you'll need to copy or rename the `./.env.example` file to `./.env`. Edit this file, setting the other config parameters available. Optionally set `SQLITE_PATH` to change where the database file lives (default `./data/grandmaster.sqlite`).
 
 
 ## Getting Started
 First things first, in order to backtest our strategies we're going to need some historical data for the symbols we're interested in. Currently grandmaster supports importing data from the Tradier API. You'll need an account with Tradier and you'll need to add your API/access key to the `./.env` file.
 
-Before we can import the data we need somewhere to store the data. We're going to use a MySQL database for this because it's easy and fast to setup. Using the `./tables.sql` file as a reference, create one table for each symbol you intend to import data for.
+Before we can import the data we need somewhere to store the data. Data is stored in a single SQLite database file with one table per symbol. Tables are created automatically by the importers and the bar streamer; `./tables.sql` documents the schema if you want to create them by hand. The PHP importers need the `pdo_sqlite` extension.
 
 When you're ready you can use the `./import.php` file to import data for each symbol directly from the Tradier API. From your terminal run:
 ```shell

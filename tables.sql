@@ -1,52 +1,45 @@
-SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
+-- Bars tables for SQLite. One table per symbol (lowercased); `iex_` / `alpaca_`
+-- prefixes are used for the alternate data sources.
+--
+-- You normally don't need to run this: the importers and the bar streamer create
+-- tables on demand. Apply manually with:  sqlite3 data/grandmaster.sqlite < tables.sql
 
-DROP TABLE IF EXISTS `tvix`;
-CREATE TABLE `tvix` (
-  `start` datetime NOT NULL,
-  `open` decimal(15, 4) unsigned DEFAULT NULL,
-  `high` decimal(15, 4) unsigned DEFAULT NULL,
-  `low` decimal(15, 4) unsigned DEFAULT NULL,
-  `close` decimal(15, 4) unsigned DEFAULT NULL,
-  `volume` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`start`),
-  KEY `close` (`close`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS "tvix" (
+  start  TEXT PRIMARY KEY NOT NULL,  -- 'YYYY-MM-DD HH:MM:SS'
+  open   REAL,
+  high   REAL,
+  low    REAL,
+  close  REAL,
+  volume INTEGER
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS "tvix_close" ON "tvix" (close);
 
-DROP TABLE IF EXISTS `spy`;
-CREATE TABLE `spy` (
-  `start` datetime NOT NULL,
-  `open` decimal(15, 4) unsigned DEFAULT NULL,
-  `high` decimal(15, 4) unsigned DEFAULT NULL,
-  `low` decimal(15, 4) unsigned DEFAULT NULL,
-  `close` decimal(15, 4) unsigned DEFAULT NULL,
-  `volume` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`start`),
-  KEY `close` (`close`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS "spy" (
+  start  TEXT PRIMARY KEY NOT NULL,  -- 'YYYY-MM-DD HH:MM:SS'
+  open   REAL,
+  high   REAL,
+  low    REAL,
+  close  REAL,
+  volume INTEGER
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS "spy_close" ON "spy" (close);
 
-DROP TABLE IF EXISTS `fb`;
-CREATE TABLE `fb` (
-  `start` datetime NOT NULL,
-  `open` decimal(15, 4) unsigned DEFAULT NULL,
-  `high` decimal(15, 4) unsigned DEFAULT NULL,
-  `low` decimal(15, 4) unsigned DEFAULT NULL,
-  `close` decimal(15, 4) unsigned DEFAULT NULL,
-  `volume` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`start`),
-  KEY `close` (`close`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS "fb" (
+  start  TEXT PRIMARY KEY NOT NULL,  -- 'YYYY-MM-DD HH:MM:SS'
+  open   REAL,
+  high   REAL,
+  low    REAL,
+  close  REAL,
+  volume INTEGER
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS "fb_close" ON "fb" (close);
 
-DROP TABLE IF EXISTS `nflx`;
-CREATE TABLE `nflx` (
-  `start` datetime NOT NULL,
-  `open` decimal(15, 4) unsigned DEFAULT NULL,
-  `high` decimal(15, 4) unsigned DEFAULT NULL,
-  `low` decimal(15, 4) unsigned DEFAULT NULL,
-  `close` decimal(15, 4) unsigned DEFAULT NULL,
-  `volume` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`start`),
-  KEY `close` (`close`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-SET FOREIGN_KEY_CHECKS = 1;
+CREATE TABLE IF NOT EXISTS "nflx" (
+  start  TEXT PRIMARY KEY NOT NULL,  -- 'YYYY-MM-DD HH:MM:SS'
+  open   REAL,
+  high   REAL,
+  low    REAL,
+  close  REAL,
+  volume INTEGER
+) WITHOUT ROWID;
+CREATE INDEX IF NOT EXISTS "nflx_close" ON "nflx" (close);
