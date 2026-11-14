@@ -2,8 +2,8 @@
     "name": "jeffreyhyer/grandmaster",
     "description": "",
     "require": {
-        "nesbot/carbon": "^1.22",
-        "vlucas/phpdotenv": "^2.4",
-        "guzzlehttp/guzzle": "^6.3"
+        "nesbot/carbon": "3.15.1",
+        "vlucas/phpdotenv": "5.8.0",
+        "guzzlehttp/guzzle": "8.5.0"
     }
 }

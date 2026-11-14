@@ -6,13 +6,13 @@ Grandmaster is a strategy backtesting and execution engine written in Node.js. T
 ## Installation
 
 ### Requirements
-- Node.js >= 8
-- NPM -OR- Yarn
+- Node.js >= 26
+- NPM
 - MySQL
 
 
 ### Optional, but suggested
-- PHP >= 7.0 (may work with PHP 5.5+ but this hasn't been tested)
+- PHP >= 8.2
     - Used to import historical data but if you already have the data or have another means to obtain it then PHP isn't a requirement.
 - Composer
     - Used to install dependencies for the aforementioned PHP scripts.
