@@ -1,8 +1,14 @@
-const Indicator = require('./Indicator')
-const Series = require('./Series')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
+import Series from './Series.ts'
+import type { HLCV } from './types.ts'
 
-class MFI extends Indicator {
-  constructor (params = {}) {
+class MFI extends Indicator<number, HLCV> {
+  period: number
+  typicalPrices: Series
+  positiveMF: Series
+  negativeMF: Series
+
+  constructor (params: IndicatorParams<HLCV> = {}) {
     super()
 
     this.period = (params.period || 14)
@@ -17,7 +23,7 @@ class MFI extends Indicator {
     }
   }
 
-  nextValue (bar) {
+  nextValue (bar: HLCV): number {
     const typicalPrice = ((bar.high + bar.low + bar.close) / 3)
 
     if (this.typicalPrices.length > 0) {
@@ -57,4 +63,4 @@ class MFI extends Indicator {
   }
 }
 
-module.exports = MFI
+export default MFI

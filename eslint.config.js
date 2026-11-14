@@ -1,8 +1,8 @@
-const neostandard = require('neostandard')
+import neostandard from 'neostandard'
 
-module.exports = [
+export default [
   { ignores: ['node_modules/**', 'vendor/**', 'data/**'] },
-  ...neostandard({ files: ['**/*.js'] }),
+  ...neostandard({ ts: true }),
   {
     rules: {}
   }

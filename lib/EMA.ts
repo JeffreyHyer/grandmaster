@@ -1,7 +1,10 @@
-const Indicator = require('./Indicator')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
 
 class EMA extends Indicator {
-  constructor (params = {}) {
+  period: number
+  alpha: number
+
+  constructor (params: IndicatorParams = {}) {
     super()
 
     this.period = (params.period || 12)
@@ -14,7 +17,7 @@ class EMA extends Indicator {
     }
   }
 
-  nextValue (value) {
+  nextValue (value: number): number {
     if (this.values.length > 0) {
       const prevEma = this.values.currentValue()
 
@@ -27,4 +30,4 @@ class EMA extends Indicator {
   }
 }
 
-module.exports = EMA
+export default EMA

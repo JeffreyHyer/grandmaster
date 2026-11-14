@@ -1,11 +1,16 @@
-const Indicator = require('./Indicator')
-const Series = require('./Series')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
+import Series from './Series.ts'
+import type { HLCV } from './types.ts'
 
 /**
  * Chaikin Money Flow (CMF)
  */
-class CMF extends Indicator {
-  constructor (params = {}) {
+class CMF extends Indicator<number, HLCV> {
+  period: number
+  volume: Series
+  volumeMF: Series
+
+  constructor (params: IndicatorParams<HLCV> = {}) {
     super()
 
     this.period = (params.period || 20)
@@ -19,7 +24,7 @@ class CMF extends Indicator {
     }
   }
 
-  nextValue (bar) {
+  nextValue (bar: HLCV): number {
     const multiplier = Number((((bar.close - bar.low) - (bar.high - bar.close)) / (bar.high - bar.low)).toFixed(4))
 
     this.volume.push(bar.volume)
@@ -41,4 +46,4 @@ class CMF extends Indicator {
   }
 }
 
-module.exports = CMF
+export default CMF

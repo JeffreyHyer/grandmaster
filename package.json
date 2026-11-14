@@ -4,7 +4,8 @@
   "description": "",
   "scripts": {
     "test": "jest",
-    "lint": "eslint \"**/*.js\""
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "Jeffrey Hyer <jmhyer135@gmail.com>",
@@ -13,17 +14,23 @@
     "command-line-args": "6.0.2",
     "date-fns": "4.4.0",
     "dotenv": "18.0.10",
+    "nats": "1.4.12",
     "nodemailer": "10.5.0",
     "redis": "6.3.1",
     "regression": "2.0.1",
     "table": "6.10.1"
   },
   "devDependencies": {
+    "@swc/core": "1.16.22",
+    "@swc/jest": "0.2.39",
+    "@types/command-line-args": "5.2.3",
+    "@types/jest": "30.0.0",
+    "@types/node": "26.6.6",
+    "@types/regression": "2.0.6",
     "eslint": "10.15.0",
     "jest-cli": "30.5.2",
-    "neostandard": "0.14.1"
+    "neostandard": "0.14.1",
+    "typescript": "6.0.3"
   },
-  "jest": {
-    "testEnvironment": "node"
-  }
+  "type": "module"
 }

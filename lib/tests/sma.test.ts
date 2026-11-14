@@ -1,5 +1,5 @@
 /* eslint-disable */
-const SMA = require('../SMA')
+import SMA from '../SMA.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages

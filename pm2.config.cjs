@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'bars',
-      script: './stream_bars_polygon.js',
+      script: './stream_bars_polygon.ts',
+      interpreter: 'node',
       watch: false,
       kill_timeout: 3000,
       instances: 1,
@@ -11,8 +12,9 @@ module.exports = {
     },
     {
       name: 'signals',
-      script: './signals.js',
+      script: './signals.ts',
       args: '-s 2-tvix-rsi',
+      interpreter: 'node',
       watch: false,
       kill_timeout: 3000,
       instances: 1,

@@ -1,5 +1,5 @@
 /* eslint-disable */
-const MFI = require('../MFI')
+import MFI from '../MFI.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:money_flow_index_mfi

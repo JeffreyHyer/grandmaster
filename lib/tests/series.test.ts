@@ -1,5 +1,5 @@
 /* eslint-disable */
-const Series = require('../Series')
+import Series from '../Series.ts'
 const series = new Series(1, 2, 3, 4, 5)
 
 test('constructor', () => {

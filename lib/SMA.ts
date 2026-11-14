@@ -1,8 +1,11 @@
-const Indicator = require('./Indicator')
-const Series = require('./Series')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
+import Series from './Series.ts'
 
 class SMA extends Indicator {
-  constructor (params = {}) {
+  period: number
+  prices: Series
+
+  constructor (params: IndicatorParams = {}) {
     super()
 
     this.period = (params.period || 12)
@@ -15,7 +18,7 @@ class SMA extends Indicator {
     }
   }
 
-  nextValue (value) {
+  nextValue (value: number): number {
     this.prices.push(value)
 
     if (this.prices.length >= this.period) {
@@ -35,4 +38,4 @@ class SMA extends Indicator {
   }
 }
 
-module.exports = SMA
+export default SMA

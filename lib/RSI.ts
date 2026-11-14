@@ -1,8 +1,13 @@
-const Indicator = require('./Indicator')
-const Series = require('./Series')
+import Indicator, { type IndicatorParams } from './Indicator.ts'
+import Series from './Series.ts'
 
 class RSI extends Indicator {
-  constructor (params = {}) {
+  period: number
+  prices: Series
+  avgGain: number
+  avgLoss: number
+
+  constructor (params: IndicatorParams = {}) {
     super()
 
     this.period = (params.period || 14)
@@ -17,12 +22,12 @@ class RSI extends Indicator {
     }
   }
 
-  nextValue (value) {
+  nextValue (value: number): number {
     this.prices.push(value)
 
     if (this.prices.length === (this.period + 1)) {
-      const gains = []
-      const losses = []
+      const gains: number[] = []
+      const losses: number[] = []
 
       this.prices.slice(0, this.period).forEach((value, index) => {
         if (index > 0) {
@@ -76,4 +81,4 @@ class RSI extends Indicator {
   }
 }
 
-module.exports = RSI
+export default RSI

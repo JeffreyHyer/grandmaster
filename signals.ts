@@ -1,20 +1,29 @@
+import commandLineArgs from 'command-line-args'
+import dotenv from 'dotenv'
+import { createClient } from 'redis'
+import nodemailer from 'nodemailer'
+import { openDb, quoteId } from './lib/db.ts'
+import type BaseStrategy from './lib/BaseStrategy.ts'
+import type { Bar, Signal, StrategyConfig } from './lib/types.ts'
+
+type StrategyConstructor = new (symbols: string[], config?: StrategyConfig) => BaseStrategy
+
 const cliParams = [
   { name: 'strategy', alias: 's', type: String, defaultOption: true }
 ]
-const params = require('command-line-args')(cliParams)
+const params = commandLineArgs(cliParams)
 
 if (undefined === params.strategy) {
   console.log('[!] ERROR: You must specify a strategy')
   process.exit()
 }
 
-require('dotenv').config()
+dotenv.config()
 
-const config = require(`./strategies/${params.strategy}/config`)
-const Strategy = require(`./strategies/${params.strategy}/strategy`)
+const config: StrategyConfig = (await import(`./strategies/${params.strategy}/config.json`, { with: { type: 'json' } })).default
+const Strategy: StrategyConstructor = (await import(`./strategies/${params.strategy}/strategy.ts`)).default
 const strategy = new Strategy(Object.keys(config.symbols))
 
-const { createClient } = require('redis')
 const redisBars = createClient({
   socket: {
     host: (process.env.REDIS_HOST || '127.0.0.1'),
@@ -26,14 +35,12 @@ const redisBars = createClient({
 
 const redisSignals = redisBars.duplicate()
 
-const { openDb, quoteId } = require('./lib/db')
 const db = openDb()
 
-const nodemailer = require('nodemailer')
 const smtp = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE,
+  port: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS
@@ -51,7 +58,7 @@ try {
     // Newest bars first so LIMIT keeps the most recent ones, then reverse
     const bars = db.prepare(`SELECT *, ? AS symbol FROM ${quoteId(symbol.toLowerCase())} ORDER BY start DESC LIMIT ?`)
       .all(symbol, config.historicBars)
-      .reverse()
+      .reverse() as unknown as Bar[]
 
     strategy.addHistory(symbol, bars)
   })
@@ -61,7 +68,7 @@ try {
 
   historyLoaded = true
 } catch (error) {
-  console.log(`[!] SQLite ERROR: ${error.message}`)
+  console.log(`[!] SQLite ERROR: ${(error as Error).message}`)
   db.close()
   shutdownRedis().finally(() => {
     process.exit(3)
@@ -92,7 +99,7 @@ redisBars.on('end', () => {
   console.log('[-] [Redis:Bars] Disconnected')
 })
 
-function onBar (message, symbol) {
+function onBar (message: string, _channel: string) {
   if (historyLoaded === true) {
     const bar = JSON.parse(message)
 
@@ -113,7 +120,7 @@ async function shutdownRedis () {
       await redisSignals.quit()
     }
   } catch (error) {
-    console.log(`[!] Redis shutdown error: ${error.message}`)
+    console.log(`[!] Redis shutdown error: ${(error as Error).message}`)
   }
 }
 
@@ -132,7 +139,7 @@ process.on('SIGINT', async () => {
   process.exit(0)
 })
 
-function onSignal (signal) {
+function onSignal (signal: Signal) {
   if (signal.buy) {
     const date = (new Date(signal.bar.start)).toISOString()
 
@@ -150,18 +157,18 @@ function onSignal (signal) {
   }
 }
 
-function publishSignal (signal, action) {
+function publishSignal (signal: Signal, action: 'BUY' | 'SELL') {
   redisSignals.publish(`${params.strategy}_${signal.symbol}`, JSON.stringify({ strategy: params.strategy, symbol: signal.symbol, action, price: signal.bar.close }))
     .catch((error) => console.log(`[!] [Redis:Signals] Publish error: ${error.message}`))
 }
 
-function email (message) {
+function email (message: string) {
   smtp.sendMail({
     from: process.env.SMTP_FROM,
     to: process.env.SMTP_TO,
     subject: 'Trading Signal',
     text: `${message}`
-  }, (error, info) => {
+  }, (error) => {
     if (error) {
       console.log(`[!] SMTP ERROR: ${error}`)
     }

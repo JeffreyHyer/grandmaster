@@ -1,5 +1,5 @@
 /* eslint-disable */
-const BollingerBands = require('../BollingerBands')
+import BollingerBands from '../BollingerBands.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:bollinger_bands
@@ -31,7 +31,7 @@ const bb = new BollingerBands({ period: 20, stdDev: 2 })
 
 test('Bollinger Bands - streaming', () => {
     prices.forEach((price, index) => {
-        let next = bb.nextValue(price)
+        let next = bb.nextValue(price)!
 
         expect(next.upper).toBeCloseTo(expectedValues[index].upper, 1)
         expect(next.middle).toBeCloseTo(expectedValues[index].middle, 1)

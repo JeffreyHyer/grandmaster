@@ -1,10 +1,27 @@
-const Series = require('./Series')
+import Series from './Series.ts'
+import type Indicator from './Indicator.ts'
+import type { Bar, SignalCallback } from './types.ts'
+
+export interface SymbolState {
+  times: Series
+  open: Series
+  close: Series
+  high: Series
+  low: Series
+  volume: Series
+
+  indicators: Record<string, Indicator<any, any>>
+
+  bought: boolean
+}
 
 class BaseStrategy {
+  symbols: Record<string, SymbolState>
+
   /**
-   * @param String[] symbols
+   * @param symbols
    */
-  constructor (symbols = []) {
+  constructor (symbols: string[] = []) {
     this.symbols = {}
 
     if (Array.isArray(symbols)) {
@@ -15,9 +32,9 @@ class BaseStrategy {
   }
 
   /**
-   * @param String symbol
+   * @param symbol
    */
-  initSymbol (symbol) {
+  initSymbol (symbol: string) {
     if (undefined === this.symbols[symbol]) {
       this.symbols[symbol] = {
         times: new Series(),
@@ -35,11 +52,11 @@ class BaseStrategy {
   }
 
   /**
-   * @param String    symbol
-   * @param Object    bar
-   * @param Function  callback
+   * @param symbol
+   * @param bar
+   * @param callback
    */
-  addBar (symbol, bar, callback) {
+  addBar (symbol: string, bar: Bar, callback?: SignalCallback) {
     this.symbols[symbol].times.push((new Date(bar.start)).getTime())
     this.symbols[symbol].open.push(bar.open)
     this.symbols[symbol].close.push(bar.close)
@@ -48,6 +65,7 @@ class BaseStrategy {
     this.symbols[symbol].volume.push(bar.volume)
 
     if (callback) {
+      // eslint-disable-next-line n/no-callback-literal -- the callback receives a signal, not an error
       callback({
         symbol,
         bar,
@@ -57,7 +75,7 @@ class BaseStrategy {
     }
   }
 
-  addHistory (symbol, bars) {
+  addHistory (symbol: string, bars: Bar[]) {
     if (Array.isArray(bars)) {
       bars.forEach((bar) => {
         this.addBar(symbol, bar)
@@ -67,9 +85,9 @@ class BaseStrategy {
     }
   }
 
-  buy () {}
+  buy (_symbol: string): boolean { return false }
 
-  sell () {}
+  sell (_symbol: string): boolean { return false }
 }
 
-module.exports = BaseStrategy
+export default BaseStrategy

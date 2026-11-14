@@ -34,6 +34,30 @@
  *      -a|--source STRING ["", "iex", "alpaca"]
  */
 
+import fs from 'node:fs'
+import commandLineArgs from 'command-line-args'
+import dotenv from 'dotenv'
+import { table, getBorderCharacters } from 'table'
+import { openDb, quoteId } from './lib/db.ts'
+import type BaseStrategy from './lib/BaseStrategy.ts'
+import type { Bar, Signal, StrategyConfig } from './lib/types.ts'
+
+interface Trade {
+  buy: { timestamp: number, price: number, qty: number, cost: number }
+  sell: { timestamp: number | null, price: number | null, revenue: number | null }
+  profit: { amt: number | null, pct: number | null }
+  stats: { timeHeld: number | null }
+}
+
+interface SymbolResult {
+  trades: Trade[]
+  output: string[][]
+  summary?: Record<string, unknown>
+  capital: number
+}
+
+type StrategyConstructor = new (symbols: string[], config?: StrategyConfig) => BaseStrategy
+
 const cliParams = [
   { name: 'strategy', alias: 's', type: String, defaultOption: true },
   { name: 'verbose', alias: 'v', type: Boolean, defaultValue: false },
@@ -46,7 +70,7 @@ const cliParams = [
   { name: 'format', alias: 'f', type: String, defaultValue: 'table' },
   { name: 'source', alias: 'a', type: String, defaultValue: '' }
 ]
-const params = require('command-line-args')(cliParams)
+const params = commandLineArgs(cliParams)
 
 if (undefined === params.strategy) {
   console.log('[!] ERROR: You must specify a strategy using the -s flag')
@@ -54,32 +78,28 @@ if (undefined === params.strategy) {
 }
 
 // Load config/environment vars from .env file
-require('dotenv').config()
+dotenv.config()
 
 // Load strategy-specific config from the strategy folder
-let config = {}
+let config: StrategyConfig
 
 if (params.config === undefined) {
-  config = require(`./strategies/${params.strategy}/config`)
+  config = (await import(`./strategies/${params.strategy}/config.json`, { with: { type: 'json' } })).default
 } else {
   config = JSON.parse(params.config)
 }
 
 // Load the strategy definition from the strategy folder
-const Strategy = require(`./strategies/${params.strategy}/strategy`)
+const Strategy: StrategyConstructor = (await import(`./strategies/${params.strategy}/strategy.ts`)).default
 
 // Initialize a new instance of the Strategy, passing in the
 // configured symbols
 const strategy = new Strategy(Object.keys(config.symbols), config)
 
-const fs = require('fs')
-
 // Open the SQLite database configured in the .env file
-const { openDb, quoteId } = require('./lib/db')
 const db = openDb()
-const { table, getBorderCharacters } = require('table')
-const symbols = {}
-const queries = []
+const symbols: Record<string, SymbolResult> = {}
+const queries: Array<{ sql: string, args: string[] }> = []
 
 // Retrieve historic data (bars) for each symbol indicated in the
 // strategy config file optionally limiting the data retrieved to the
@@ -88,7 +108,7 @@ Object.keys(config.symbols).forEach(symbol => {
   const sqlTable = ((params.source !== '') ? `${params.source}_${symbol.toLowerCase()}` : `${symbol.toLowerCase()}`)
 
   const where = []
-  const args = [symbol]
+  const args: string[] = [symbol]
 
   if (params.begin && params.begin !== '') {
     where.push('start >= ?')
@@ -113,12 +133,12 @@ Object.keys(config.symbols).forEach(symbol => {
 })
 
 {
-  let results
+  let results: Array<Array<Bar & { symbol: string }>>
 
   try {
-    results = queries.map(q => db.prepare(q.sql).all(...q.args))
+    results = queries.map(q => db.prepare(q.sql).all(...q.args) as unknown as Array<Bar & { symbol: string }>)
   } catch (error) {
-    console.log(`[!] SQLite ERROR: ${error.message}`)
+    console.log(`[!] SQLite ERROR: ${(error as Error).message}`)
     db.close()
     process.exit()
   }
@@ -138,7 +158,7 @@ Object.keys(config.symbols).forEach(symbol => {
   // backtested.
   Object.keys(symbols).forEach(symbol => {
     if (symbols[symbol].trades.length > 0) {
-      const lastTrade = symbols[symbol].trades.pop()
+      const lastTrade = symbols[symbol].trades.pop()!
       const i = (strategy.symbols[symbol].times.length - 1)
 
       // Determine if all trades were closed, if not close the
@@ -175,7 +195,7 @@ Object.keys(config.symbols).forEach(symbol => {
       generateSummary(symbol)
     }
 
-    let _output = null
+    let _output: string | null = null
 
     if (params.format === 'table') {
       if (params.verbose) {
@@ -206,13 +226,13 @@ Object.keys(config.symbols).forEach(symbol => {
     }
 
     if (params.format === 'json') {
-      _output = JSON.stringify(symbols[symbol].output)
+      _output = JSON.stringify(symbols[symbol].summary ?? symbols[symbol].output)
     }
 
     // If the tofile flag was set, output the results to a file,
     // otherwise output to the console.
     if (params.tofile) {
-      fs.writeFileSync(`./strategies/${params.strategy}/backtest_${symbol}.txt`, _output, { encoding: 'utf-8' })
+      fs.writeFileSync(`./strategies/${params.strategy}/backtest_${symbol}.txt`, String(_output), { encoding: 'utf-8' })
     } else {
       console.log(_output)
     }
@@ -228,7 +248,7 @@ Object.keys(config.symbols).forEach(symbol => {
  *
  * @returns null
  */
-function logSignal (signal) {
+function logSignal (signal: Signal) {
   if (signal.buy === true) {
     const d = new Date(signal.bar.start)
     const s = signal.symbol
@@ -242,7 +262,7 @@ function logSignal (signal) {
     // Calculate the number of shares purchased based on the
     // closing price and the capital available.
     const qty = Number(Math.floor(symbols[s].capital / signal.bar.close))
-    const cost = Number(signal.bar.close * qty).toFixed(2)
+    const cost = Number(Number(signal.bar.close * qty).toFixed(2))
 
     symbols[s].capital -= cost
 
@@ -269,7 +289,7 @@ function logSignal (signal) {
   } else if (signal.sell === true) {
     const d = new Date(signal.bar.start)
     const s = signal.symbol
-    const trade = symbols[s].trades.pop()
+    const trade = symbols[s].trades.pop()!
 
     trade.sell.timestamp = d.getTime()
     trade.sell.price = signal.bar.close
@@ -310,7 +330,7 @@ function logSignal (signal) {
  *
  * @returns null
  */
-function generateSummary (symbol) {
+function generateSummary (symbol: string) {
   const trades = symbols[symbol].trades
   const output = symbols[symbol].output
 
@@ -426,7 +446,7 @@ function generateSummary (symbol) {
       output.push(['Avg Trades/Day', `~${avgTradesPerDay.toFixed(0)} trades/day`, ' ', ' '])
     }
   } else if (params.format === 'json') {
-    const _output = {}
+    const _output: Record<string, unknown> = {}
     _output.capital = { start: Number(params.capital), end: Number(symbols[symbol].capital.toFixed(2)) }
     _output.totalProfitLoss = { amt: Number(totalProfit.toFixed(2)), pct: Number(totalProfitPct.toFixed(2)) }
     _output.tradeCount = { total: trades.length, won: numWin, lost: (trades.length - numWin) }
@@ -436,7 +456,7 @@ function generateSummary (symbol) {
     _output.avgTimeHeld = Number(avgTimeHeld.toFixed(0))
     _output.avgTradesPerDay = Number(avgTradesPerDay.toFixed(0))
 
-    symbols[symbol].output = _output
+    symbols[symbol].summary = _output
   }
 }
 
@@ -446,14 +466,14 @@ function generateSummary (symbol) {
  *
  * @param Object symbol
  */
-function outputData (symbol) {
-  const rows = []
+function outputData (symbol: string) {
+  const rows: unknown[][] = []
   const s = strategy.symbols[symbol]
   const indicators = Object.keys(s.indicators)
-  const indicatorValues = {}
-  const trades = {}
+  const indicatorValues: Record<string, unknown[]> = {}
+  const trades: Record<string, number> = {}
 
-  const headerRow = ['date', 'open', 'high', 'low', 'close', 'volume', 'trades']
+  const headerRow: unknown[] = ['date', 'open', 'high', 'low', 'close', 'volume', 'trades']
 
   indicators.forEach(indicator => {
     headerRow.push(indicator)
@@ -465,11 +485,11 @@ function outputData (symbol) {
 
   symbols[symbol].trades.forEach(trade => {
     trades[trade.buy.timestamp] = 1
-    trades[trade.sell.timestamp] = 2
+    trades[String(trade.sell.timestamp)] = 2
   })
 
   s.times.forEach((time, index) => {
-    const row = [time, s.open[index], s.high[index], s.low[index], s.close[index], s.volume[index], s.trades[index]]
+    const row: unknown[] = [time, s.open[index], s.high[index], s.low[index], s.close[index], s.volume[index], undefined]
 
     indicators.forEach(indicator => {
       if (indicatorValues[indicator][index]) {
@@ -488,7 +508,7 @@ function outputData (symbol) {
     rows.push(row)
   })
 
-  const csv = []
+  const csv: string[] = []
 
   rows.forEach(row => {
     csv.push(row.join(','))

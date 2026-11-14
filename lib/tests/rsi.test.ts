@@ -1,5 +1,5 @@
 /* eslint-disable */
-const RSI = require('../RSI')
+import RSI from '../RSI.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:relative_strength_index_rsi

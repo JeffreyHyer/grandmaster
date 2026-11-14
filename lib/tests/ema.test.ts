@@ -1,5 +1,5 @@
 /* eslint-disable */
-const EMA = require('../EMA')
+import EMA from '../EMA.ts'
 
 /**
  * @link http://stockcharts.com/school/doku.php?id=chart_school:technical_indicators:moving_averages

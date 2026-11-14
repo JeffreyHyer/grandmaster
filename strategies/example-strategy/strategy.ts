@@ -1,7 +1,8 @@
-const BaseStrategy = require('../../lib/BaseStrategy')
-const BollingerBands = require('../../lib/BollingerBands')
-const utils = require('../../lib/utils')
-const config = require('./config')
+import BaseStrategy from '../../lib/BaseStrategy.ts'
+import BollingerBands from '../../lib/BollingerBands.ts'
+import * as utils from '../../lib/utils.ts'
+import type { Bar, SignalCallback } from '../../lib/types.ts'
+import config from './config.json' with { type: 'json' }
 
 /**
  * A strategy must always extend the `BaseStrategy` class.
@@ -10,7 +11,7 @@ class Strategy extends BaseStrategy {
   /**
    * @param String[] symbols
    */
-  constructor (symbols = []) {
+  constructor (symbols: string[] = []) {
     super(symbols)
 
     // Setup any indicators you need for your strategy
@@ -36,7 +37,7 @@ class Strategy extends BaseStrategy {
    *                          the execution of the buy/sell
    *                          indicator functions.
    */
-  addBar (symbol, bar, callback) {
+  addBar (symbol: string, bar: Bar, callback?: SignalCallback) {
     // Add the latest close price to our Bollinger Band indicator
     this.symbols[symbol].indicators['BollingerBands'].nextValue(bar.close)
 
@@ -54,7 +55,7 @@ class Strategy extends BaseStrategy {
    * @returns Boolean True if conditions indicate we should buy,
    *                  False otherwise.
    */
-  buy (symbol) {
+  buy (symbol: string) {
     const data = this.symbols[symbol]
 
     if (data.times.length >= config.historicBars) {
@@ -62,7 +63,7 @@ class Strategy extends BaseStrategy {
         // In this case, we trigger a BUY signal when the
         // closing price crosses below the lower Bollinger
         // band.
-        const buySignal = (utils.crossunderSeries(data.close, data.indicators['BollingerBands'].lowerBand))
+        const buySignal = (utils.crossunderSeries(data.close, (data.indicators['BollingerBands'] as BollingerBands).lowerBand))
 
         if (buySignal) {
           this.symbols[symbol].bought = true
@@ -84,13 +85,13 @@ class Strategy extends BaseStrategy {
    * @returns Boolean True if conditions indicate we should sell.
    *                  False otherwise.
    */
-  sell (symbol) {
+  sell (symbol: string) {
     const data = this.symbols[symbol]
 
     if (data.bought === true) {
       // In this case, we trigger a SELL signal when the
       // close price crosses above the upper Bollinger band.
-      const sellSignal = (utils.crossoverSeries(data.close, data.indicators['BollingerBands'].upperBand))
+      const sellSignal = (utils.crossoverSeries(data.close, (data.indicators['BollingerBands'] as BollingerBands).upperBand))
 
       if (sellSignal) {
         this.symbols[symbol].bought = false
@@ -103,4 +104,4 @@ class Strategy extends BaseStrategy {
   }
 }
 
-module.exports = Strategy
+export default Strategy

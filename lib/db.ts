@@ -2,7 +2,7 @@ import { mkdirSync } from 'fs'
 import { join, dirname, resolve } from 'path'
 import { DatabaseSync } from 'node:sqlite'
 
-const DEFAULT_PATH = join(__dirname, '..', 'data', 'grandmaster.sqlite')
+const DEFAULT_PATH = join(import.meta.dirname, '..', 'data', 'grandmaster.sqlite')
 
 /**
  * Open (creating if needed) the SQLite database. The location comes from
@@ -30,7 +30,7 @@ function openDb () {
  * @param String name
  * @returns String
  */
-function quoteId (name) {
+function quoteId (name: string) {
   return `"${String(name).replace(/"/g, '""')}"`
 }
 
@@ -41,7 +41,7 @@ function quoteId (name) {
  * @param DatabaseSync db
  * @param String table
  */
-function ensureBarsTable (db, table) {
+function ensureBarsTable (db: DatabaseSync, table: string) {
   const t = quoteId(table)
 
   db.exec(`CREATE TABLE IF NOT EXISTS ${t} (
@@ -55,4 +55,4 @@ function ensureBarsTable (db, table) {
   db.exec(`CREATE INDEX IF NOT EXISTS ${quoteId(`${table}_close`)} ON ${t} (close)`)
 }
 
-export default { openDb, quoteId, ensureBarsTable }
+export { openDb, quoteId, ensureBarsTable }
