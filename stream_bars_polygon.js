@@ -1,74 +1,76 @@
 require('dotenv').config()
 
-const format = require('date-fns/format')
+const { format } = require('date-fns')
 
 const NATS = require('nats')
 
-const Redis = require('redis')
-const redis = Redis.createClient({
+const { createClient } = require('redis')
+const redis = createClient({
+  socket: {
     host: (process.env.REDIS_HOST || '127.0.0.1'),
-    port: (process.env.REDIS_PORT || 6379),
-    password: (process.env.REDIS_PASS || null),
-    db: (process.env.REDIS_DB || 0)
+    port: Number(process.env.REDIS_PORT || 6379)
+  },
+  password: (process.env.REDIS_PASS || undefined),
+  database: Number(process.env.REDIS_DB || 0)
 })
 
 const mysql = require('mysql')
 const db = mysql.createConnection({
-    host:       process.env.MYSQL_HOST,
-    user:       process.env.MYSQL_USER,
-    password:   process.env.MYSQL_PASS,
-    database:   process.env.MYSQL_DB
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASS,
+  database: process.env.MYSQL_DB
 })
 
-var firstMinute = {
-    'TVIX': true
+const firstMinute = {
+  TVIX: true
 }
 
-var lastMinute = {
-    'TVIX': null
+const lastMinute = {
+  TVIX: null
 }
 
-var symbols = {
-    'TVIX': [[]]
+const symbols = {
+  TVIX: [[]]
 }
 
 console.log('===============================================================================')
 console.log((new Date()).toISOString())
 
 const nats = NATS.connect({
-    servers: [
-        'nats://nats1.polygon.io:31101',
-        'nats://nats2.polygon.io:31102',
-        'nats://nats3.polygon.io:31103'
-    ],
-    token: process.env.ALPACA_KEY
+  servers: [
+    'nats://nats1.polygon.io:31101',
+    'nats://nats2.polygon.io:31102',
+    'nats://nats3.polygon.io:31103'
+  ],
+  token: process.env.ALPACA_KEY
 })
 
 nats.on('error', (error) => {
-    console.log(`[!] ERROR:`)
-    console.log(error)
+  console.log('[!] ERROR:')
+  console.log(error)
 })
 
 nats.on('connect', () => {
-    console.log('[+] NATS connected')
+  console.log('[+] NATS connected')
 })
 
 nats.on('disconnect', () => {
-    console.log('[-] NATS disconnected')
+  console.log('[-] NATS disconnected')
 })
 
 nats.on('close', () => {
-    console.log('[-] NATS connection closed')
+  console.log('[-] NATS connection closed')
 })
 
 nats.on('reconnect', () => {
-    console.log('[~] NATS reconnecting')
+  console.log('[~] NATS reconnecting')
 })
 
 const natsID = nats.subscribe('T.TVIX', (msg) => {
-    let data = JSON.parse(msg)
+  const data = JSON.parse(msg)
 
-    /**
+  /**
      *  data: {
      *      sym: symbol,
      *      x:   exchange_id,
@@ -79,139 +81,154 @@ const natsID = nats.subscribe('T.TVIX', (msg) => {
      *  }
      */
 
-    // console.log(`[TVIX]\t${data.s} @ ${data.p}`)
+  // console.log(`[TVIX]\t${data.s} @ ${data.p}`)
 
-    let time = new Date(data.t)
+  const time = new Date(data.t)
 
-    // Ignore messages outside of normal market hours
-    if (time.getHours() < 9) {
-        return
-    } else if ((time.getHours() === 9) && (time.getMinutes() < 30)) {
-        return
-    } else if (time.getHours() > 15) {
-        return
+  // Ignore messages outside of normal market hours
+  if (time.getHours() < 9) {
+    return
+  } else if ((time.getHours() === 9) && (time.getMinutes() < 30)) {
+    return
+  } else if (time.getHours() > 15) {
+    return
+  }
+
+  const minute = time.getMinutes()
+
+  if (lastMinute['TVIX'] !== minute) {
+    if (lastMinute['TVIX'] !== null) {
+      symbols['TVIX'].unshift([])
+
+      consolidateBar('TVIX')
     }
 
-    let minute = time.getMinutes()
+    lastMinute['TVIX'] = minute
+  }
 
-    if (lastMinute['TVIX'] !== minute) {
-        if (lastMinute['TVIX'] !== null) {
-            symbols['TVIX'].unshift([])
-
-            consolidateBar('TVIX')
-        }
-
-        lastMinute['TVIX'] = minute
-    }
-
-    symbols['TVIX'][0].push({
-        size: data.s,
-        price: data.p,
-        time: data.t
-    })
+  symbols['TVIX'][0].push({
+    size: data.s,
+    price: data.p,
+    time: data.t
+  })
 })
 
 redis.on('connect', () => {
-    console.log('(+) Redis connected')
+  console.log('(+) Redis connected')
 })
 
 redis.on('error', (error) => {
-    console.log(`(!) Redis Error: ${error}`)
+  console.log(`(!) Redis Error: ${error}`)
 })
 
 redis.on('end', () => {
-    console.log('(-) Redis disconnected')
+  console.log('(-) Redis disconnected')
 })
 
-process.on('SIGINT', () => {
-    nats.unsubscribe(natsID)
-    nats.close()
-    redis.quit()
-    db.end()
-
-    process.exit()
+redis.connect().catch((error) => {
+  console.log(`(!) Redis connect failed: ${error}`)
+  process.exit(2)
 })
 
-var consolidateBar = (symbol) => {
-    if (symbols[symbol] && (symbols[symbol].length > 1)) {
-        let trades = symbols[symbol].pop()
+process.on('SIGINT', async () => {
+  nats.unsubscribe(natsID)
+  nats.close()
 
-        if (firstMinute[symbol] === true) {
-            firstMinute[symbol] = false
-            return
-        }
+  try {
+    if (redis.isOpen) {
+      await redis.quit()
+    }
+  } catch (error) {
+    console.log(`(!) Redis Error: ${error}`)
+  }
 
-        let bar = {
-            symbol: symbol,
-            start: null,
-            end: null,
-            open_time: null,
-            close_time: null,
-            open: 0,
-            high: 0,
-            low: Infinity,
-            close: 0,
-            volume: 0,
-            trades: 0
-        }
+  db.end()
 
-        trades.forEach(trade => {
-            let time = (new Date(trade.time)).getTime()
-            let price = Number(trade.price)
+  process.exit()
+})
 
-            if ((!bar.open_time) || (time < bar.open_time)) {
-                bar.open_time = time
-                bar.open = price
-            }
+const consolidateBar = (symbol) => {
+  if (symbols[symbol] && (symbols[symbol].length > 1)) {
+    const trades = symbols[symbol].pop()
 
-            if ((!bar.close_time) || (time > bar.close_time)) {
-                bar.close_time = time
-                bar.close = price
-            }
+    if (firstMinute[symbol] === true) {
+      firstMinute[symbol] = false
+      return
+    }
 
-            if (price > bar.high) {
-                bar.high = price
-            }
+    const bar = {
+      symbol,
+      start: null,
+      end: null,
+      open_time: null,
+      close_time: null,
+      open: 0,
+      high: 0,
+      low: Infinity,
+      close: 0,
+      volume: 0,
+      trades: 0
+    }
 
-            if (price < bar.low) {
-                bar.low = price
-            }
+    trades.forEach(trade => {
+      const time = (new Date(trade.time)).getTime()
+      const price = Number(trade.price)
 
-            bar.trades += 1
-            bar.volume += Number(trade.size)
-        })
+      if ((!bar.open_time) || (time < bar.open_time)) {
+        bar.open_time = time
+        bar.open = price
+      }
 
-        // Set start and end time
-        let date = new Date(bar.open_time)
-        bar.start = date.setSeconds(0, 0)
-        bar.end = date.setMinutes((date.getMinutes() + 1), 0, 0)
+      if ((!bar.close_time) || (time > bar.close_time)) {
+        bar.close_time = time
+        bar.close = price
+      }
 
-        // Convert all timestamps to MySQL compatible datetime strings
-        bar.start = format(bar.start, 'YYYY-MM-DD HH:mm:ss')
-        bar.end = format(bar.end, 'YYYY-MM-DD HH:mm:ss')
-        bar.open_time = format(bar.open_time, 'YYYY-MM-DD HH:mm:ss')
-        bar.close_time = format(bar.close_time, 'YYYY-MM-DD HH:mm:ss')
+      if (price > bar.high) {
+        bar.high = price
+      }
 
-        // Save to database
-        db.query(
+      if (price < bar.low) {
+        bar.low = price
+      }
+
+      bar.trades += 1
+      bar.volume += Number(trade.size)
+    })
+
+    // Set start and end time
+    const date = new Date(bar.open_time)
+    bar.start = date.setSeconds(0, 0)
+    bar.end = date.setMinutes((date.getMinutes() + 1), 0, 0)
+
+    // Convert all timestamps to MySQL compatible datetime strings
+    bar.start = format(bar.start, 'yyyy-MM-dd HH:mm:ss')
+    bar.end = format(bar.end, 'yyyy-MM-dd HH:mm:ss')
+    bar.open_time = format(bar.open_time, 'yyyy-MM-dd HH:mm:ss')
+    bar.close_time = format(bar.close_time, 'yyyy-MM-dd HH:mm:ss')
+
+    // Save to database
+    db.query(
             `INSERT INTO ${bar.symbol.toLowerCase()} VALUES(?, ?, ?, ?, ?, ?)`,
             [
-                bar.start,
-                bar.open,
-                bar.high,
-                bar.low,
-                bar.close,
-                bar.volume
+              bar.start,
+              bar.open,
+              bar.high,
+              bar.low,
+              bar.close,
+              bar.volume
             ],
             (error) => {
-                if (error) {
-                    console.log(`[!] MySQL ERROR: ${error}`)
-                }
+              if (error) {
+                console.log(`[!] MySQL ERROR: ${error}`)
+              }
             }
-        )
+    )
 
-        redis.publish(bar.symbol, JSON.stringify(bar))
-    } else {
-        console.log(`[!] ERROR: consolidateBar() was called for ${symbol} but no data was found`)
-    }
+    redis.publish(bar.symbol, JSON.stringify(bar)).catch((error) => {
+      console.log(`(!) Redis publish error: ${error}`)
+    })
+  } else {
+    console.log(`[!] ERROR: consolidateBar() was called for ${symbol} but no data was found`)
+  }
 }
